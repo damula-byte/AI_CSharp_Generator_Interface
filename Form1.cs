@@ -45,7 +45,7 @@ namespace GeminiC__App
                              "Default: The generated C# program will not use Class or Method. Please manually request if needed.\n" +
                              "------------------------------------------------------------------------------------------------\n " +
                              "Generate: Call Gemini\n " +
-                             "Execute: Run the script\n " +
+                             "Execute: Time to play\n " +
                              "Show: Display existing file content";
             // Saving the element's orginal size
             originalFormSize = this.Size;
