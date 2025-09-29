@@ -40,7 +40,7 @@ namespace GeminiC__App
         {
             InitializeComponent();  // Things are displayed on the form y default
             lblPerformance.Text = "";
-            rtbOutput.Text = " Welcome user, please input a Prompt!\n" +
+            rtbOutput.Text = " Welcome Editor, please input a Prompt!\n" +
                              "------------------------------------------------------------------------------------------------\n " +
                              "Default: The generated C# program will not use Class or Method. Please manually request if needed.\n" +
                              "------------------------------------------------------------------------------------------------\n " +
