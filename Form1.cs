@@ -1,11 +1,12 @@
-﻿using System.Data;
-using System.Text;
-using Newtonsoft.Json;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using Microsoft.CodeAnalysis;
-using System.Text.RegularExpressions;   
+using Newtonsoft.Json;
+using System.Data;
 using System.IO;
+using System.Security.Policy;
+using System.Text;
+using System.Text.RegularExpressions;   
 
 namespace GeminiC__App
 {
@@ -15,10 +16,11 @@ namespace GeminiC__App
         private const string ApiKey = "AIzaSyChVB52MO6q_GWG9Po4CCOq7YZPN_UlaTE";
         private const string GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + ApiKey;
         */
-
-        private const string ApiKey = "AIzaSyCGuJvxNXXMrdOUXCp4l6LZwtT5p_nkkUs";
-        private const string GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + ApiKey;
         
+        private const string ApiKey = "AIzaSyBNQonrLz5eqNjwJsDqz8WCsQRrHxtjxZ0";
+        private const string GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + ApiKey;
+        
+
 
         private string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GeneratedScript.csx"); // Application directory
         // Autosize Prep
@@ -187,40 +189,66 @@ namespace GeminiC__App
             {
                 using (var client = new HttpClient())
                 {
-                    var jsonBody = $@"{{
-                        ""contents"": [
-                            {{
-                                ""role"": ""user"",
-                                ""parts"": [
-                                    {{
-                                        ""text"": ""Generate a C# script (.csx) that {prompt}.Include all necessary 'using' statements (e.g., 'using System;') at the top of the code.""
-                                    }}
-                                ]
-                            }}
-                        ],
-                        ""generationConfig"": {{
-                            ""temperature"": 0.7,
-                            ""maxOutputTokens"": 4096
-                        }}
-                    }}";
+                    var requestBody = new
+                    {
+                        contents = new[]
+                        {
+                    new
+                    {
+                        role = "user",
+                        parts = new[]
+                        {
+                            new
+                            {
+                                text = $"Generate a C# script (.csx) that {prompt}.Include all necessary 'using' statements (e.g., 'using System;') at the top of the code."
+                            }
+                        }
+                    }
+                },
+                        generationConfig = new
+                        {
+                            temperature = 0.7,
+                            maxOutputTokens = 4096
+                        }
+                    };
 
+                    string jsonBody = JsonConvert.SerializeObject(requestBody);
                     var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+                    // 1. Gửi request
                     var response = await client.PostAsync(GeminiApiUrl, content);
-                    response.EnsureSuccessStatusCode();
+
+                    // 2. TỰ KIỂM TRA THAY VÌ DÙNG EnsureSuccessStatusCode()
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        // 3. ĐỌC LỖI TỪ ĐÂY
+                        string errorDetails = await response.Content.ReadAsStringAsync();
+
+                        // 4. Hiển thị lỗi chi tiết và thoát
+                        MessageBox.Show($"Error calling Gemini API: {response.StatusCode} ({response.ReasonPhrase})\n\nDetails:\n{errorDetails}");
+                        return null;
+                    }
+
+                    // Nếu code chạy đến đây, nghĩa là đã thành công (mã 2xx)
                     var responseBody = await response.Content.ReadAsStringAsync();
                     var jsonResponse = JsonConvert.DeserializeObject<dynamic>(responseBody);
+
                     string rawScript = jsonResponse.candidates[0].content.parts[0].text.ToString();
                     rawScript = rawScript.Replace("\\n", Environment.NewLine).Replace("\\\"", "\"");
-                    return ExtractCSharpCode(rawScript); // Single extraction step
+                    return ExtractCSharpCode(rawScript);
                 }
             }
-            catch (Exception ex)
+            catch (HttpRequestException httpEx) // Bắt lỗi mạng (ví dụ: không có internet)
             {
-                MessageBox.Show($"Error calling Gemini API: {ex.Message}");
+                MessageBox.Show($"Network Error: {httpEx.Message}");
+                return null;
+            }
+            catch (Exception ex) // Bắt các lỗi khác (như lỗi parse JSON)
+            {
+                MessageBox.Show($"An unexpected error occurred: {ex.Message}");
                 return null;
             }
         }
-
         // Extract C# code from the raw Gemini responsec
         private string ExtractCSharpCode(string rawResponse)
         {
